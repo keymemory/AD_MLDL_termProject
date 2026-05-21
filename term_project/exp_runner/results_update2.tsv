@@ -1,0 +1,13 @@
+A-64	sqa	64	0	0	none	0.5	IMG-Acc	68.57	4241/4241
+A-128	sqa	128	0	0	none	0.5	IMG-Acc	68.86	4241/4241
+A-32	sqa	32	0	0	none	0.5	IMG-Acc	68.32	4241/4241
+B-128	sqa	128	1	192	simple_avg	0.5	IMG-Acc	68.86	4241/4241
+V-576	vqav2_orig	576	0	-	none	0.5	Acc	75.03	6000/6000
+B-32	sqa	32	1	64	simple_avg	0.5	IMG-Acc	69.31	4241/4241
+B-64	sqa	64	1	128	simple_avg	0.5	IMG-Acc	68.86	4241/4241
+C-128	sqa	128	1	192	weighted_avg	0.5	IMG-Acc	68.62	4241/4241
+C-64	sqa	64	1	128	weighted_avg	0.5	IMG-Acc	69.16	4241/4241
+V-128	vqav2_orig	128	0	-	none	0.5	Acc	72.18	6000/6000
+C-32	sqa	32	1	64	weighted_avg	0.5	IMG-Acc	69.46	4241/4241
+V-64	vqav2_orig	64	0	-	none	0.5	Acc	68.88	6000/6000
+V-32	vqav2_orig	32	0	-	none	0.5	Acc	63.11	6000/6000

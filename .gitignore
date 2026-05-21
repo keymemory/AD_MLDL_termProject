@@ -216,3 +216,45 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# =========================================================
+# AD_MLDL_termProject 프로젝트 — 대용량/생성물 제외
+# =========================================================
+
+# ----- 데이터셋 (총 80GB): 폴더 구조 + README + .gitkeep만 커밋 -----
+dataset/**
+!dataset/
+!dataset/*/
+!dataset/README.md
+!dataset/**/.gitkeep
+
+# ----- 모델 가중치 (LLaVA-1.5-7B + CLIP, 약 15GB) -----
+VisPruner_run/models/
+# term_project/models는 VisPruner_run/models로의 symlink(아주 작음, 커밋 OK)
+
+# ----- 추론 결과/업로드 jsonl (누적 시 큼) -----
+# playground/data/eval/*/answers/ 는 대부분 dataset symlink 경유라 위에서 이미 제외됨.
+# 안전망:
+**/answers/
+**/answers_upload/
+
+# ----- 락/임시/로그 -----
+**/exp_runner/locks/
+**/exp_runner/locks_u2/
+*.log
+.DS_Store
+
+
+# ----- CSV 및 모든 이미지 파일 (절대 커밋 X) -----
+*.csv
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tif
+*.tiff
+*.webp
+*.svg
+*.ico
+

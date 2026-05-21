@@ -1,0 +1,69 @@
+Please make sure to use our provided visual features as gqadataset.org for better comparability. We provide both spatial and object-based features trained on GQA train set.
+In particular please avoid using features from https://github.com/peteanderson80/bottom-up-attention since they were trained on images contained in the GQA validation set and thus may give false scores improvement.
+
+Please consider using --consistency to compute consistency scores for entailed questions.
+If you do so, please provide answers to all questions in val_all_questions.json.
+
+Please consider using --grounding to compute attention scores.
+If you do so, please provide attention maps through --attentions.
+
+Loading questions...
+Loading predictions...
+  0%|          | 0/12578 [00:00<?, ?it/s] 91%|█████████ | 11476/12578 [00:00<00:00, 114752.18it/s]100%|██████████| 12578/12578 [00:00<00:00, 114303.20it/s]
+
+Binary: 73.06%
+Open: 42.00%
+Accuracy: 56.26%
+Validity: 0.00%
+Plausibility: 0.00%
+Distribution: 1.49 (lower is better)
+
+Accuracy / structural type:
+  choose: 72.01% (1129 questions)
+  compare: 62.31% (589 questions)
+  logical: 72.55% (1803 questions)
+  query: 42.00% (6805 questions)
+  verify: 76.82% (2252 questions)
+
+Accuracy / semantic type:
+  attr: 60.95% (5186 questions)
+  cat: 47.52% (1149 questions)
+  global: 60.51% (157 questions)
+  obj: 84.32% (778 questions)
+  rel: 49.32% (5308 questions)
+
+Accuracy / steps number:
+  1: 74.68% (237 questions)
+  2: 50.90% (6395 questions)
+  3: 58.60% (4266 questions)
+  4: 63.30% (793 questions)
+  5: 70.68% (822 questions)
+  6: 90.24% (41 questions)
+  7: 100.00% (20 questions)
+  8: 100.00% (3 questions)
+  9: 100.00% (1 questions)
+
+Accuracy / words number:
+  3: 39.74% (151 questions)
+  4: 51.27% (630 questions)
+  5: 46.05% (1290 questions)
+  6: 52.60% (2074 questions)
+  7: 56.76% (1642 questions)
+  8: 60.25% (1185 questions)
+  9: 60.27% (1281 questions)
+  10: 59.97% (1249 questions)
+  11: 57.44% (994 questions)
+  12: 62.54% (638 questions)
+  13: 58.66% (462 questions)
+  14: 60.00% (345 questions)
+  15: 59.07% (237 questions)
+  16: 59.83% (117 questions)
+  17: 58.51% (94 questions)
+  18: 67.11% (76 questions)
+  19: 79.07% (43 questions)
+  20: 59.38% (32 questions)
+  21: 68.42% (19 questions)
+  22: 66.67% (12 questions)
+  23: 25.00% (4 questions)
+  24: 50.00% (2 questions)
+  25: 100.00% (1 questions)
