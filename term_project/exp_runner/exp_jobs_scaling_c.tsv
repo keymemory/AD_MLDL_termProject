@@ -1,0 +1,29 @@
+# Experiment C: M1 Scaling Law — TextVQA benchmark
+# TextVQA (OCR/텍스트 인식): 5000 questions, local eval 가능
+# 같은 M2=64/M2=32 × 동일 M1 비율 시리즈 (Experiment B와 동일 설계)
+# Format: ID  BENCH  M2  CLUST  M1  METHOD  R
+#
+# ── Stage1-only baselines (CLUST=0, M1 unused) ─────────────────────────────
+TC-64-base	textvqa	64	0	64	simple_avg	0.5
+TC-32-base	textvqa	32	0	32	simple_avg	0.5
+#
+# ── M2=64 Two-Stage 시리즈 (M1:M2 = 1.0×~9.0×) ─────────────────────────────
+TC-64	textvqa	64	1	64	simple_avg	0.5
+TC-96	textvqa	64	1	96	simple_avg	0.5
+TC-128	textvqa	64	1	128	simple_avg	0.5
+TC-192	textvqa	64	1	192	simple_avg	0.5
+TC-256	textvqa	64	1	256	simple_avg	0.5
+TC-384	textvqa	64	1	384	simple_avg	0.5
+TC-576	textvqa	64	1	576	simple_avg	0.5
+#
+# ── M2=32 Two-Stage 시리즈 (M1:M2 = 1.0×~18.0×) ────────────────────────────
+TC32-32	textvqa	32	1	32	simple_avg	0.5
+TC32-48	textvqa	32	1	48	simple_avg	0.5
+TC32-64	textvqa	32	1	64	simple_avg	0.5
+TC32-96	textvqa	32	1	96	simple_avg	0.5
+TC32-128	textvqa	32	1	128	simple_avg	0.5
+TC32-192	textvqa	32	1	192	simple_avg	0.5
+TC32-256	textvqa	32	1	256	simple_avg	0.5
+TC32-288	textvqa	32	1	288	simple_avg	0.5
+TC32-384	textvqa	32	1	384	simple_avg	0.5
+TC32-576	textvqa	32	1	576	simple_avg	0.5

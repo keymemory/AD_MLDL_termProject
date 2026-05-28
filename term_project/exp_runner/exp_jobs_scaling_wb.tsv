@@ -1,0 +1,36 @@
+# Experiment W-B: M1 Scaling Law — POPE + GQA, weighted_avg 전용
+# Format: ID  BENCH  M2  CLUST  M1  METHOD  R
+# simple_avg 대응: M-96/M-192/.../M32-576 → 여기선 W 접두사
+#
+# ── M2=64 시리즈 ──────────────────────────────
+WM-96	pope	64	1	96	weighted_avg	0.5
+WM-96	gqa	64	1	96	weighted_avg	0.5
+WM-128	pope	64	1	128	weighted_avg	0.5
+WM-128	gqa	64	1	128	weighted_avg	0.5
+WM-192	pope	64	1	192	weighted_avg	0.5
+WM-192	gqa	64	1	192	weighted_avg	0.5
+WM-256	pope	64	1	256	weighted_avg	0.5
+WM-256	gqa	64	1	256	weighted_avg	0.5
+WM-384	pope	64	1	384	weighted_avg	0.5
+WM-384	gqa	64	1	384	weighted_avg	0.5
+WM-576	pope	64	1	576	weighted_avg	0.5
+WM-576	gqa	64	1	576	weighted_avg	0.5
+# ── M2=32 시리즈 ──────────────────────────────
+WM32-48	pope	32	1	48	weighted_avg	0.5
+WM32-48	gqa	32	1	48	weighted_avg	0.5
+WM32-64	pope	32	1	64	weighted_avg	0.5
+WM32-64	gqa	32	1	64	weighted_avg	0.5
+WM32-96	pope	32	1	96	weighted_avg	0.5
+WM32-96	gqa	32	1	96	weighted_avg	0.5
+WM32-128	pope	32	1	128	weighted_avg	0.5
+WM32-128	gqa	32	1	128	weighted_avg	0.5
+WM32-192	pope	32	1	192	weighted_avg	0.5
+WM32-192	gqa	32	1	192	weighted_avg	0.5
+WM32-256	pope	32	1	256	weighted_avg	0.5
+WM32-256	gqa	32	1	256	weighted_avg	0.5
+WM32-288	pope	32	1	288	weighted_avg	0.5
+WM32-288	gqa	32	1	288	weighted_avg	0.5
+WM32-384	pope	32	1	384	weighted_avg	0.5
+WM32-384	gqa	32	1	384	weighted_avg	0.5
+WM32-576	pope	32	1	576	weighted_avg	0.5
+WM32-576	gqa	32	1	576	weighted_avg	0.5

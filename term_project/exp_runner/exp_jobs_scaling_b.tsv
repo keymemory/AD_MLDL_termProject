@@ -1,0 +1,20 @@
+# Experiment B: M1 Scaling Law — M2 고정, M1 변화
+# Format: ID  BENCH  M2  CLUST  M1  METHOD  R
+# CLUST=1 → enable_clustering, M1=stage1_tokens, M2=visual_token_num(최종)
+# M-96/M-192 pope는 results.tsv에 완료. GQA만 추가 실행.
+# M-576: Stage1 없이 KMeans만 (M1=576=전체 토큰)
+#
+# ── M2=64 시리즈 ──────────────────────────────
+M-96	gqa	64	1	96	simple_avg	0.5
+M-192	gqa	64	1	192	simple_avg	0.5
+M-256	pope	64	1	256	simple_avg	0.5
+M-256	gqa	64	1	256	simple_avg	0.5
+M-384	pope	64	1	384	simple_avg	0.5
+M-384	gqa	64	1	384	simple_avg	0.5
+M-576	pope	64	1	576	simple_avg	0.5
+M-576	gqa	64	1	576	simple_avg	0.5
+# ── M2=32 시리즈 ──────────────────────────────
+M32-128	pope	32	1	128	simple_avg	0.5
+M32-128	gqa	32	1	128	simple_avg	0.5
+M32-256	pope	32	1	256	simple_avg	0.5
+M32-256	gqa	32	1	256	simple_avg	0.5

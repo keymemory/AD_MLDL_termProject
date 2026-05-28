@@ -228,9 +228,8 @@ dataset/**
 !dataset/README.md
 !dataset/**/.gitkeep
 
-# ----- 모델 가중치 (LLaVA-1.5-7B + CLIP, 약 15GB) -----
-VisPruner_run/models/
-# term_project/models는 VisPruner_run/models로의 symlink(아주 작음, 커밋 OK)
+# ----- VisPruner_run (원본 코드 복사본, term_project로 대체됨) -----
+VisPruner_run/
 
 # ----- 추론 결과/업로드 jsonl (누적 시 큼) -----
 # playground/data/eval/*/answers/ 는 대부분 dataset symlink 경유라 위에서 이미 제외됨.
@@ -238,11 +237,19 @@ VisPruner_run/models/
 **/answers/
 **/answers_upload/
 
+# ----- 스케일링 실험 생성물 (추론 답변, eval 로그, 락 디렉토리) -----
+term_project/exp_runner/scaling_*_answers/
+term_project/exp_runner/scaling_*_logs/
+term_project/exp_runner/scaling_*_locks/
+term_project/exp_runner/logs/
+
 # ----- 락/임시/로그 -----
 **/exp_runner/locks/
 **/exp_runner/locks_u2/
+*.tsv.lock
 *.log
 .DS_Store
+experiment_b_logs/
 
 
 # ----- CSV 및 모든 이미지 파일 (절대 커밋 X) -----

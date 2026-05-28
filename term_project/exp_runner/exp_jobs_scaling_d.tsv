@@ -1,0 +1,29 @@
+# Experiment D: M1 Scaling Law — ScienceQA benchmark
+# ScienceQA (과학 다지선다형): 4241 questions (2017 with image, 2224 text-only)
+# 같은 M2=64/M2=32 × 동일 M1 비율 시리즈 (Experiment B/C와 동일 설계)
+# Format: ID  BENCH  M2  CLUST  M1  METHOD  R
+#
+# ── Stage1-only baselines (CLUST=0) ──────────────────────────────────────────
+TD-64-base	sqa	64	0	64	simple_avg	0.5
+TD-32-base	sqa	32	0	32	simple_avg	0.5
+#
+# ── M2=64 Two-Stage 시리즈 (M1:M2 = 1.0×~9.0×) ──────────────────────────────
+TD-64	sqa	64	1	64	simple_avg	0.5
+TD-96	sqa	64	1	96	simple_avg	0.5
+TD-128	sqa	64	1	128	simple_avg	0.5
+TD-192	sqa	64	1	192	simple_avg	0.5
+TD-256	sqa	64	1	256	simple_avg	0.5
+TD-384	sqa	64	1	384	simple_avg	0.5
+TD-576	sqa	64	1	576	simple_avg	0.5
+#
+# ── M2=32 Two-Stage 시리즈 (M1:M2 = 1.0×~18.0×) ─────────────────────────────
+TD32-32	sqa	32	1	32	simple_avg	0.5
+TD32-48	sqa	32	1	48	simple_avg	0.5
+TD32-64	sqa	32	1	64	simple_avg	0.5
+TD32-96	sqa	32	1	96	simple_avg	0.5
+TD32-128	sqa	32	1	128	simple_avg	0.5
+TD32-192	sqa	32	1	192	simple_avg	0.5
+TD32-256	sqa	32	1	256	simple_avg	0.5
+TD32-288	sqa	32	1	288	simple_avg	0.5
+TD32-384	sqa	32	1	384	simple_avg	0.5
+TD32-576	sqa	32	1	576	simple_avg	0.5

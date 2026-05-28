@@ -1,0 +1,20 @@
+# Experiment W-D: M1 Scaling Law — ScienceQA, weighted_avg 전용
+# Format: ID  BENCH  M2  CLUST  M1  METHOD  R
+#
+# ── M2=64 시리즈 ──────────────────────────────
+WM-96	sqa	64	1	96	weighted_avg	0.5
+WM-128	sqa	64	1	128	weighted_avg	0.5
+WM-192	sqa	64	1	192	weighted_avg	0.5
+WM-256	sqa	64	1	256	weighted_avg	0.5
+WM-384	sqa	64	1	384	weighted_avg	0.5
+WM-576	sqa	64	1	576	weighted_avg	0.5
+# ── M2=32 시리즈 ──────────────────────────────
+WM32-48	sqa	32	1	48	weighted_avg	0.5
+WM32-64	sqa	32	1	64	weighted_avg	0.5
+WM32-96	sqa	32	1	96	weighted_avg	0.5
+WM32-128	sqa	32	1	128	weighted_avg	0.5
+WM32-192	sqa	32	1	192	weighted_avg	0.5
+WM32-256	sqa	32	1	256	weighted_avg	0.5
+WM32-288	sqa	32	1	288	weighted_avg	0.5
+WM32-384	sqa	32	1	384	weighted_avg	0.5
+WM32-576	sqa	32	1	576	weighted_avg	0.5

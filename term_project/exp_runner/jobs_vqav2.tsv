@@ -1,9 +1,0 @@
-A-128	vqav2	128	0	128	none	0.5
-A-64	vqav2	64	0	64	none	0.5
-A-32	vqav2	32	0	32	none	0.5
-B-128s	vqav2	128	1	192	simple_avg	0.5
-B-64s	vqav2	64	1	128	simple_avg	0.5
-B-32s	vqav2	32	1	64	simple_avg	0.5
-B-128w	vqav2	128	1	192	weighted_avg	0.5
-B-64w	vqav2	64	1	128	weighted_avg	0.5
-B-32w	vqav2	32	1	64	weighted_avg	0.5

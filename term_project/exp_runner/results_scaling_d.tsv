@@ -1,0 +1,39 @@
+ID	BENCH	M2	CLUST	M1	METHOD	R	METRIC	VALUE	GEN	IMG_ACC
+TD-32-base	sqa	32	0	32	simple_avg	0.5	Acc	69.61
+68.32	4241/4241	68.32
+TD-64-base	sqa	64	0	64	simple_avg	0.5	Acc	69.91
+68.96	4241/4241	68.96
+TD-96	sqa	64	1	96	simple_avg	0.5	Acc	70.15
+69.46	4241/4241	69.46
+TD-64	sqa	64	1	64	simple_avg	0.5	Acc	69.91
+68.96	4241/4241	68.96
+TD-192	sqa	64	1	192	simple_avg	0.5	Acc	69.79
+68.72	4241/4241	68.72
+TD-128	sqa	64	1	128	simple_avg	0.5	Acc	69.89
+68.91	4241/4241	68.91
+TD-384	sqa	64	1	384	simple_avg	0.5	Acc	69.89
+68.91	4241/4241	68.91
+TD-256	sqa	64	1	256	simple_avg	0.5	Acc	69.82
+68.77	4241/4241	68.77
+TD-576	sqa	64	1	576	simple_avg	0.5	Acc	69.70
+68.52	4241/4241	68.52
+TD32-32	sqa	32	1	32	simple_avg	0.5	Acc	69.61
+68.32	4241/4241	68.32
+TD32-48	sqa	32	1	48	simple_avg	0.5	Acc	70.12
+69.41	4241/4241	69.41
+TD32-64	sqa	32	1	64	simple_avg	0.5	Acc	70.27
+69.71	4241/4241	69.71
+TD32-96	sqa	32	1	96	simple_avg	0.5	Acc	69.79
+68.72	4241/4241	68.72
+TD32-128	sqa	32	1	128	simple_avg	0.5	Acc	70.10
+69.36	4241/4241	69.36
+TD32-192	sqa	32	1	192	simple_avg	0.5	Acc	69.61
+68.32	4241/4241	68.32
+TD32-256	sqa	32	1	256	simple_avg	0.5	Acc	69.72
+68.57	4241/4241	68.57
+TD32-288	sqa	32	1	288	simple_avg	0.5	Acc	69.84
+68.82	4241/4241	68.82
+TD32-384	sqa	32	1	384	simple_avg	0.5	Acc	69.65
+68.42	4241/4241	68.42
+TD32-576	sqa	32	1	576	simple_avg	0.5	Acc	69.56
+68.22	4241/4241	68.22

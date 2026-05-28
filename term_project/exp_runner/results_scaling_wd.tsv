@@ -1,0 +1,16 @@
+ID	BENCH	M2	CLUST	M1	METHOD	R	METRIC	VALUE	GEN	IMG_ACC
+WM-96	sqa	64	1	96	weighted_avg	0.5	Acc	69.89	4241/4241	68.91
+WM-128	sqa	64	1	128	weighted_avg	0.5	Acc	70.03	4241/4241	69.21
+WM-256	sqa	64	1	256	weighted_avg	0.5	Acc	69.77	4241/4241	68.67
+WM-192	sqa	64	1	192	weighted_avg	0.5	Acc	69.91	4241/4241	68.96
+WM-576	sqa	64	1	576	weighted_avg	0.5	Acc	69.68	4241/4241	68.47
+WM-384	sqa	64	1	384	weighted_avg	0.5	Acc	69.87	4241/4241	68.86
+WM32-48	sqa	32	1	48	weighted_avg	0.5	Acc	69.89	4241/4241	68.91
+WM32-64	sqa	32	1	64	weighted_avg	0.5	Acc	70.43	4241/4241	70.05
+WM32-96	sqa	32	1	96	weighted_avg	0.5	Acc	69.94	4241/4241	69.01
+WM32-128	sqa	32	1	128	weighted_avg	0.5	Acc	70.15	4241/4241	69.46
+WM32-192	sqa	32	1	192	weighted_avg	0.5	Acc	69.96	4241/4241	69.06
+WM32-256	sqa	32	1	256	weighted_avg	0.5	Acc	70.03	4241/4241	69.21
+WM32-288	sqa	32	1	288	weighted_avg	0.5	Acc	69.75	4241/4241	68.62
+WM32-384	sqa	32	1	384	weighted_avg	0.5	Acc	69.72	4241/4241	68.57
+WM32-576	sqa	32	1	576	weighted_avg	0.5	Acc	69.51	4241/4241	68.12
