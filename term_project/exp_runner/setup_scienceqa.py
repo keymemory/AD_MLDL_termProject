@@ -77,7 +77,6 @@ with open(SPLITS_OUT, "w") as f:
 print(f"pid_splits.json → {SPLITS_OUT}  (test: {len(split_ids)} IDs)")
 
 # Verify image count
-img_count = sum(1 for _, d, _ in os.walk(IMG_BASE) for _ in [None] if not d)
 actual_imgs = len([p for p in os.listdir(IMG_BASE) if os.path.isdir(os.path.join(IMG_BASE, p))])
 print(f"Image folders extracted: {actual_imgs}  (skipped: {skip_img})")
 
@@ -88,6 +87,6 @@ for q in llava_qs:
         expected = os.path.join(IMG_BASE, q["image"])
         if not os.path.exists(expected):
             missing.append(q["image"])
-print(f"LLaVA qfile image cross-check: {len(missing)} missing" if missing else "All LLaVA image refs present ✓")
+print(f"LLaVA qfile image cross-check: {len(missing)} missing" if missing else "All LLaVA image refs present [OK]")
 
 print("Done.")

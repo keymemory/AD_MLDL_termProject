@@ -1,103 +1,75 @@
-# ✂️ Beyond Text-Visual Attention: Exploiting Visual Cues for Effective Token Pruning in VLMs
+# term_project — Two-Stage Visual Token Reduction (구현 루트)
 
-*A plug-and-play method that utilizes visual cues for more effective token pruning in visual language models.*
+본 디렉토리는 과제 제안 방법 **Two-Stage(VisPruner + Spherical K-Means)** 의 실제 구현·실험 코드 루트입니다.
+LLaVA-1.5-7B 백본 위에 Stage1(VisPruner pruning)과 Stage2(Spherical K-Means 병합)를 통합했습니다.
 
-[📄 [Paper](https://arxiv.org/abs/2412.01818)] [🌐 [Project Page](https://theia4869.com/VisPruner)]
+> 프로젝트 개요·결과 요약은 상위 [`../README.md`](../README.md) 참조.
+> 본 코드는 [LLaVA](https://github.com/haotian-liu/LLaVA)와 [VisPruner](https://github.com/Theia-4869/VisPruner)를 기반으로 합니다.
 
-## 📰 News
+## 디렉토리
 
-🔥 **[2025/06/28]** Our [Project Page](https://theia4869.com/VisPruner) is updated!
-
-🔥 **[2025/06/26]** Our [VisPruner](https://arxiv.org/abs/2412.01818) is accepted by ICCV 2025! 🎉
-
-🔥 **[2025/06/24]** A new version of [FasterVLM](https://github.com/Theia-4869/FasterVLM) named VisPruner is released!
-
-## 👁️ Overview
-
-![overview](assets/overview.png)
-
-In this work, we find that the **text-visual attention in the language model is not an ideal indicator for visual token pruning**. Based on the analysis, We propose **VisPruner**, a plug-and-play method that utilizes **visual cues** for more effective token pruning in visual language models. Specifically, we first use **visual attention** to select a limited number of **significant tokens**. Then, we remove duplicate tokens from the remaining ones based on their **similarity**. By retaining **diverse tokens** alongside the initially selected important tokens, we maximally preserve the visual information of the input image.
-
-![case](assets/case.png)
-
-## ⚙️ Setup
-
-### 🏝️ Environment
-
-1. Clone this repository.
-```bash
-git clone https://github.com/anonymous-4869/VisPruner.git
-cd VisPruner
+```
+term_project/
+├── llava/                     모델 코드 (LLaVA + Two-Stage 통합)
+│   └── model/
+│       ├── spherical_kmeans.py            ★ Stage2: Spherical K-Means 병합 (신규)
+│       ├── llava_arch.py                  M1/M2 분리 + Stage2 호출 ([Two-Stage] 주석)
+│       ├── builder.py                     dtype 패치 (CUDA 무음손상 해결)
+│       └── language_model/llava_llama.py  clustering 설정 getter
+├── exp_runner/                실험 실행 인프라
+│   ├── workers/               worker_*.sh    GPU별 추론·채점 워커
+│   ├── launchers/             launch_*.sh    다중 GPU 런처
+│   ├── jobs/                  exp_jobs_*.tsv  실험 작업 정의
+│   ├── results/              results*.tsv   실험 결과
+│   ├── efficiency.py          실험5 효율성(지연·메모리) 측정
+│   ├── vqa_eval.py            VQAv2 로컬 채점 (공식 정규화)
+│   └── setup_*.py             ScienceQA/TextVQA 데이터 준비
+├── scripts/
+│   ├── convert_gqa_for_eval.py    GQA 채점 변환 (워커가 사용)
+│   └── legacy_llava/              LLaVA 원본 학습·평가 스크립트 (본 과제 미사용·보관)
+├── project_result_md/         결과 문서 → 카테고리별 정리 (final_report.md 우선)
+├── sanity_check.sh            구현 sanity 3종 (POPE 300 subset)
+├── EVAL.md                    벤치마크 데이터 준비 안내 (LLaVA 원본)
+└── pyproject.toml             패키지 정의
 ```
 
-2. Install necessary packages.
+## 핵심 구현
+
+| 파일 | 역할 |
+|---|---|
+| `llava/model/spherical_kmeans.py` | Stage2 — 단위 구 투영 후 cosine 기반 k-means, simple/weighted 평균 병합 |
+| `llava/model/llava_arch.py` | `encode_images`에서 Stage1(VisPruner) 선택 → Stage2 병합. `enable_clustering=False`면 원본 VisPruner와 비트동일 |
+| `llava/model/language_model/llava_llama.py` | clustering 하이퍼파라미터(M1, M2, method, max_iter) getter |
+| `llava/model/builder.py` | `device_map='auto'` 시 vision tower dtype 강제 캐스팅 (무음 손상 방지) |
+
+핵심 수정부는 코드에 `[VisPruner]` / `[Two-Stage]` / `[FIX]` / `[RESUME]` 주석으로 표시.
+
+## 실행 (모델·데이터 복원 후)
+
 ```bash
-conda create -n vispruner python=3.10 -y
-conda activate vispruner
 pip install -e .
+
+# 1) 구현 sanity (VisPruner-only / two-stage simple / weighted)
+bash sanity_check.sh
+
+# 2) M1 Scaling Law 실험 (다중 GPU 병렬, 결과는 exp_runner/results/)
+bash exp_runner/launchers/launch_b.sh     # POPE + GQA
+bash exp_runner/launchers/launch_c.sh     # TextVQA
+bash exp_runner/launchers/launch_d.sh     # ScienceQA
+
+# 3) 효율성(지연·GPU 메모리) 측정
+python exp_runner/efficiency.py
 ```
 
-3. (Optional) Install FlashAttention for further inference acceleration.
-```bash
-pip install flash-attn --no-build-isolation
-```
+> 실행 스크립트의 경로(모델·데이터·conda)는 실험 서버 기준 절대경로로 작성되어 있습니다.
+> 데이터 준비는 [EVAL.md](EVAL.md), 재현 절차는 `project_result_md/2_main_experiments/06_experiment_log.md` 참조.
 
-### 📦️ Model
+## 결과 문서
 
-Download corresponding [LLaVA](https://github.com/haotian-liu/LLaVA/blob/main/docs/MODEL_ZOO.md) checkpoints from [Hugging Face](https://huggingface.co/liuhaotian) 🤗:
-
-| Version | LLM | Checkpoint |
-|----------|:----------:|:-----------:|
-| LLaVA-1.5 | Vicuna-7B | [liuhaotian/llava-v1.5-7b](https://huggingface.co/liuhaotian/llava-v1.5-7b) |
-| LLaVA-1.5 | Vicuna-13B | [liuhaotian/llava-v1.5-13b](https://huggingface.co/liuhaotian/llava-v1.5-13b) |
-| LLaVA-1.6 (LLaVA-NeXT) | Vicuna-7B | [liuhaotian/llava-v1.6-vicuna-7b](https://huggingface.co/liuhaotian/llava-v1.6-vicuna-7b) |
-| LLaVA-1.6 (LLaVA-NeXT) | Vicuna-13B | [liuhaotian/llava-v1.6-vicuna-13b](https://huggingface.co/liuhaotian/llava-v1.6-vicuna-13b) |
-
-### 📊 Data
-
-Download each dataset according to [EVAL.md](EVAL.md).
-
-## 📋️ Evaluation
-
-The main implementation of VisPruner is highlighted with `[VisPruner]` annotations, mainly in [`llava_llama.py`](llava/model/language_model/llava_llama.py#L51), [`llava_arch.py`](llava/model/llava_arch.py#L140) and [`clip_encoder.py`](llava/model/multimodal_encoder/clip_encoder.py#L35).
-
-We provide the evaluation scripts for each benchmark:
-```bash
-CUDA_VISIBLE_DEVICES=0 bash scripts/v1_5/eval/${DATASET}.sh ${VISUAL_TOKEN_NUMBER} ${IMPORTANT_RATIO}
-```
-You only need to set the remaining visual token number and important ratio as the bash arguments. For example, if you want to evaluate VisPruner with 64 important tokens and 64 diverse tokens retained on the VQAv2 benchmark, you can run the script `./scripts/v1_5/eval/vqav2.sh` with argument `128` and `0.5`:
-```bash
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 bash scripts/v1_5/eval/vqav2.sh 128 0.5
-```
-
-And if you want to evaluate VisPruner with 48 important tokens and 16 diverse tokens retained on the MME benchmark, you can run the following command:
-```bash
-CUDA_VISIBLE_DEVICES=0 bash scripts/v1_5/eval/mme.sh 64 0.75
-```
-
-For evaluation with the 13B LLM, you just need to replace the `CKPT` argument from `llava-v1.5-7b` to `llava-v1.5-13b` in each script. And for evaluation with LLaVA-NeXT, you can use the scripts in `./scripts/v1_6/eval`. For example, if you want to evaluate VisPruner with 32 * 5 = 160 visual tokens retained on the TextVQA benchmark, you can run the following command:
-```bash
-CUDA_VISIBLE_DEVICES=0 bash scripts/v1_6/eval/textvqa.sh 32 0.5
-```
-
-The detailed guidance for evaluation commands and online submission of each benchmark can be found in [EVAL.md](EVAL.md).
-
-## 🔖 Citation
-
-If you find VisPruner useful for your research and applications, please cite using this BibTeX:
-```bibtex
-@article{zhang2025vispruner,
-      title={Beyond Text-Visual Attention: Exploiting Visual Cues for Effective Token Pruning in VLMs}, 
-      author={Zhang, Qizhe and Cheng, Aosong and Lu, Ming and Zhang, Renrui and Zhuo, Zhiyong and Cao, Jiajun and Guo, Shaobo and She, Qi and Zhang, Shanghang},
-      journal={arXiv preprint arXiv:2412.01818},
-      year={2025},
-}
-```
-
-## 🎟️ License
-
-This project is released under the [Apache 2.0 license](LICENSE).
-
-## 🏅 Acknowledgement
-
-We appreciate the open-source efforts of [LLaVA](https://github.com/haotian-liu/LLaVA) and [ToMe](https://github.com/facebookresearch/ToMe).
+| 폴더 | 내용 |
+|---|---|
+| `project_result_md/final_report.md` | 최종 종합 보고서 (먼저 읽기) |
+| `project_result_md/1_implementation/` | 구현 보고서·검증·명세준수 체크리스트 |
+| `project_result_md/2_main_experiments/` | 실험1~5 (baseline·ablation·질의유형·효율·실험로그) |
+| `project_result_md/3_scaling_experiments/` | M1 Scaling Law (B/C/D + 교차 벤치마크 분석) |
+| `../vispruner_md/` | VisPruner 원본 재현 문서 (회귀 비교용) |

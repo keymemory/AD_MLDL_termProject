@@ -10,29 +10,43 @@ VQAv2/SQA-IMG)에서 검증.
 
 ```
 AD_MLDL_termProject/
-├── term_project/              ★ 제안 구조(Two-Stage) — 본 과제 핵심
-│   ├── llava/                 LLaVA 코드 (Stage1+Stage2 통합)
+├── term_project/                  ★ 제안 구조(Two-Stage) — 본 과제 핵심
+│   ├── llava/                     LLaVA 코드 (Stage1+Stage2 통합)
 │   │   ├── model/
 │   │   │   ├── spherical_kmeans.py        ★ Stage2 핵심 (신규)
 │   │   │   ├── llava_arch.py              M1/M2 분리 + Stage2 호출
 │   │   │   ├── builder.py                 dtype 패치 (CUDA 무음손상 해결)
 │   │   │   └── language_model/llava_llama.py  clustering 설정 getter
-│   │   └── eval/                          model_vqa_loader/science/.py (resume 패치)
-│   ├── exp_runner/            워커·결과 (results.tsv, logs/, vqa_eval.py)
-│   ├── project_result_md/     ★ 결과 문서 (final_report.md, 01~06_*.md)
-│   ├── sanity_check.sh        구현 sanity 3종
+│   │   └── eval/                          model_vqa_loader/science (resume 패치)
+│   ├── exp_runner/                실험 실행 인프라
+│   │   ├── workers/               worker_*.sh   (GPU별 추론·채점 워커)
+│   │   ├── launchers/             launch_*.sh   (다중 GPU 런처)
+│   │   ├── jobs/                  exp_jobs_*.tsv (실험 작업 정의)
+│   │   ├── results/              results*.tsv  (실험 결과)
+│   │   ├── efficiency.py          실험5 효율성 측정
+│   │   ├── vqa_eval.py            VQAv2 로컬 채점
+│   │   └── setup_*.py             데이터셋 준비
+│   ├── scripts/
+│   │   ├── convert_gqa_for_eval.py        GQA 채점 변환 (프로젝트 사용)
+│   │   └── legacy_llava/                  LLaVA 원본 학습·평가 스크립트 (미사용·보관)
+│   ├── project_result_md/         ★ 결과 문서 (Two-Stage 제안)
+│   │   ├── final_report.md                ★ 최종 종합 보고서 (먼저 읽기)
+│   │   ├── 1_implementation/              구현·검증·명세준수 체크리스트
+│   │   ├── 2_main_experiments/            실험1~5 (baseline/ablation/질의유형/효율/로그)
+│   │   └── 3_scaling_experiments/         M1 Scaling Law (B/C/D + 교차분석)
+│   ├── sanity_check.sh            구현 sanity 3종
+│   ├── models/ → (.gitignore)     LLaVA-1.5-7B + CLIP (15GB, symlink)
 │   └── playground/data/eval → ../../dataset (symlink)
 │
-├── VisPruner_run/             원본 VisPruner 재현 환경 (회귀비교용)
-│   ├── llava/                 원본 + 동일 패치
-│   └── models/                LLaVA-1.5-7B + CLIP (★ .gitignore, 15GB)
+├── vispruner_md/                  VisPruner 재현 문서
+│   ├── 01~06_*.md                 환경/코드분석/재현결과/실행로그/추가벤치/전체재현
+│   └── VisPruner_*_보고서.md       재현 종합 보고서 2종
 │
-├── dataset/                   5개 벤치마크 (★ 폴더만 유지, 실데이터 .gitignore)
+├── dataset/                       5개 벤치마크 (★ 폴더만 유지, 실데이터 .gitignore)
 │   ├── pope/ gqa/ textvqa/ vqav2/ scienceqa/ ...
 │   └── README.md
 │
-├── vispruner_md/              VisPruner 1차 재현 문서
-└── README.md                  (이 파일)
+└── README.md                      (이 파일)
 ```
 
 > **모델/데이터는 `.gitignore`로 제외**(15GB 모델 + 80GB 데이터). 폴더 구조와 코드만 커밋.
@@ -133,7 +147,7 @@ A↔B 동일 subset 상대비교만 유효.
 cd term_project
 pip install -e .
 bash sanity_check.sh                       # 구현 sanity 3종
-bash exp_runner/launch.sh                  # 실험1+3 3-GPU 병렬
+bash exp_runner/launchers/launch_b.sh      # 실험(M1 scaling) 다중 GPU 병렬
 python exp_runner/efficiency.py            # 실험5 효율성
 ```
 
@@ -159,5 +173,5 @@ POPE/GQA/VQAv2/SQA-IMG에서 일관 향상을 달성했고, 특히 공격적 압
 TextVQA(OCR)만 예외로 task-aware 정책의 필요성을 시사한다.
 
 상세 결과: **`term_project/project_result_md/final_report.md`** (11개 섹션 종합)
-재현 절차/명령: `term_project/project_result_md/06_experiment_log.md`
-구현 검증: `term_project/project_result_md/구현_명세준수_체크리스트.md`
+재현 절차/명령: `term_project/project_result_md/2_main_experiments/06_experiment_log.md`
+구현 검증: `term_project/project_result_md/1_implementation/구현_명세준수_체크리스트.md`

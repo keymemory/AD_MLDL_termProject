@@ -62,6 +62,6 @@ print(f"Question file: {len(q_items)} items | missing images: {len(missing)}")
 if missing:
     print("  First 5 missing:", missing[:5])
 else:
-    print("  All images present ✓")
+    print("  All images present [OK]")
 
 print("Done.")
