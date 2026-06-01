@@ -49,8 +49,10 @@ AD_MLDL_termProject/
 └── README.md                      (이 파일)
 ```
 
+
 > **모델/데이터는 `.gitignore`로 제외**(15GB 모델 + 80GB 데이터). 폴더 구조와 코드만 커밋.
 > 데이터 복원 방법: `term_project/project_result_md/06_experiment_log.md` 참조.
+
 
 ---
 
