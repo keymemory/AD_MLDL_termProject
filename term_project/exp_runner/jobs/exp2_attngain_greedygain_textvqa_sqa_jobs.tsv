@@ -1,0 +1,15 @@
+# ID	PHASE	BENCH	M2	METHOD	SELECT	DIVERSE	STAGE1
+# Dynamic M1 from attention-drop elbow + greedy cosine diversity-gain elbow.
+# Actual M1 is n_important + n_diverse; STAGE1=576 only keeps worker CLI compatible.
+AGG-32s	phase1-attngain-greedygain	textvqa	32	simple_avg	attngain	greedygain	576
+AGG-32w	phase1-attngain-greedygain	textvqa	32	weighted_avg	attngain	greedygain	576
+AGG-64s	phase1-attngain-greedygain	textvqa	64	simple_avg	attngain	greedygain	576
+AGG-64w	phase1-attngain-greedygain	textvqa	64	weighted_avg	attngain	greedygain	576
+AGG-128s	phase1-attngain-greedygain	textvqa	128	simple_avg	attngain	greedygain	576
+AGG-128w	phase1-attngain-greedygain	textvqa	128	weighted_avg	attngain	greedygain	576
+AGG-32s	phase1-attngain-greedygain	sqa	32	simple_avg	attngain	greedygain	576
+AGG-32w	phase1-attngain-greedygain	sqa	32	weighted_avg	attngain	greedygain	576
+AGG-64s	phase1-attngain-greedygain	sqa	64	simple_avg	attngain	greedygain	576
+AGG-64w	phase1-attngain-greedygain	sqa	64	weighted_avg	attngain	greedygain	576
+AGG-128s	phase1-attngain-greedygain	sqa	128	simple_avg	attngain	greedygain	576
+AGG-128w	phase1-attngain-greedygain	sqa	128	weighted_avg	attngain	greedygain	576

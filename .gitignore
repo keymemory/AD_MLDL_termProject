@@ -251,6 +251,13 @@ term_project/exp_runner/logs/
 .DS_Store
 experiment_b_logs/
 
+# Exp2 runtime artifacts (final aggregate results live in vispruner_md/exp2/*.tsv).
+term_project/exp_runner/exp2_answers/
+term_project/exp_runner/exp2_logs/
+term_project/exp_runner/exp2_locks/
+vispruner_md/exp2/attn_stats/
+vispruner_md/exp2/attention_plots/
+
 
 # ----- CSV 및 모든 이미지 파일 (절대 커밋 X) -----
 *.csv
@@ -264,4 +271,3 @@ experiment_b_logs/
 *.webp
 *.svg
 *.ico
-

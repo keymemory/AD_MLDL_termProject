@@ -90,6 +90,8 @@ def eval_model(args):
         stage1_tokens=args.stage1_tokens,
         merge_method=args.merge_method,
         kmeans_max_iter=args.kmeans_max_iter,
+        select_mode=args.select_mode,
+        diverse_mode=args.diverse_mode,
     )
 
     # Data
@@ -173,6 +175,11 @@ if __name__ == "__main__":
     parser.add_argument("--merge_method", type=str, default="simple_avg",
                         choices=["simple_avg", "weighted_avg"])
     parser.add_argument("--kmeans_max_iter", type=int, default=10)
+    # AGG parameter-free Stage 1 selection.
+    parser.add_argument("--select_mode", type=str, default="fixed",
+                        choices=["fixed", "attngain"])
+    parser.add_argument("--diverse_mode", type=str, default="fixed",
+                        choices=["fixed", "greedygain"])
     args = parser.parse_args()
 
     eval_model(args)

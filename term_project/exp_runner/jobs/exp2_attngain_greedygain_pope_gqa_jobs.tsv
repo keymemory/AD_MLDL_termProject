@@ -1,0 +1,17 @@
+# ID	PHASE	BENCH	M2	METHOD	SELECT	DIVERSE	STAGE1
+# Dynamic M1 from two elbow curves:
+# Important: sort attention high to low, use elbow over first-order attention drops.
+# Diverse: greedily add lowest-cosine-similarity tokens, use elbow over marginal diversity gains.
+# Actual M1 is n_important + n_diverse; STAGE1=576 only keeps worker CLI compatible.
+AGG-32s	phase1-attngain-greedygain	pope	32	simple_avg	attngain	greedygain	576
+AGG-32w	phase1-attngain-greedygain	pope	32	weighted_avg	attngain	greedygain	576
+AGG-64s	phase1-attngain-greedygain	pope	64	simple_avg	attngain	greedygain	576
+AGG-64w	phase1-attngain-greedygain	pope	64	weighted_avg	attngain	greedygain	576
+AGG-128s	phase1-attngain-greedygain	pope	128	simple_avg	attngain	greedygain	576
+AGG-128w	phase1-attngain-greedygain	pope	128	weighted_avg	attngain	greedygain	576
+AGG-32s	phase1-attngain-greedygain	gqa	32	simple_avg	attngain	greedygain	576
+AGG-32w	phase1-attngain-greedygain	gqa	32	weighted_avg	attngain	greedygain	576
+AGG-64s	phase1-attngain-greedygain	gqa	64	simple_avg	attngain	greedygain	576
+AGG-64w	phase1-attngain-greedygain	gqa	64	weighted_avg	attngain	greedygain	576
+AGG-128s	phase1-attngain-greedygain	gqa	128	simple_avg	attngain	greedygain	576
+AGG-128w	phase1-attngain-greedygain	gqa	128	weighted_avg	attngain	greedygain	576

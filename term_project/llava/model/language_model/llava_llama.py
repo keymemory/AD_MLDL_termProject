@@ -43,7 +43,8 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
 
     def __init__(self, config, visual_token_num, important_ratio,
                  enable_clustering=False, stage1_tokens=None,
-                 merge_method="simple_avg", kmeans_max_iter=10):
+                 merge_method="simple_avg", kmeans_max_iter=10,
+                 select_mode="fixed", diverse_mode="fixed"):
         super(LlamaForCausalLM, self).__init__(config)
         self.model = LlavaLlamaModel(config)
         self.pretraining_tp = config.pretraining_tp
@@ -60,6 +61,8 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
         self.stage1_tokens = stage1_tokens if stage1_tokens is not None else visual_token_num
         self.merge_method = merge_method
         self.kmeans_max_iter = kmeans_max_iter
+        self.select_mode = select_mode
+        self.diverse_mode = diverse_mode
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -87,6 +90,12 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
 
     def get_kmeans_max_iter(self):
         return getattr(self, "kmeans_max_iter", 10)
+
+    def get_select_mode(self):
+        return getattr(self, "select_mode", "fixed")
+
+    def get_diverse_mode(self):
+        return getattr(self, "diverse_mode", "fixed")
 
     def forward(
         self,

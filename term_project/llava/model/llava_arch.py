@@ -14,6 +14,8 @@
 
 
 from abc import ABC, abstractmethod
+import json
+import os
 
 import torch
 import torch.nn as nn
@@ -24,6 +26,95 @@ from .multimodal_projector.builder import build_vision_projector
 from llava.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 
 from llava.mm_utils import get_anyres_image_grid_shape
+
+
+_EPS = 1e-8
+
+
+def _l2norm(x, dim=-1):
+    return x / x.float().norm(dim=dim, keepdim=True).clamp_min(_EPS).to(x.dtype)
+
+
+def _max_distance_knee(y):
+    """Kneedle fallback: index with max distance from first-last chord."""
+    if y.numel() <= 2:
+        return int(y.numel())
+    yf = y.float()
+    x = torch.linspace(0, 1, yf.numel(), device=y.device)
+    y0, y1 = yf[0], yf[-1]
+    baseline = y0 + (y1 - y0) * x
+    idx = int((yf - baseline).abs().argmax().item())
+    return max(1, idx + 1)
+
+
+def _attention_gain_elbow_indices(attn):
+    order = attn.argsort(descending=True)
+    sorted_attn = attn[order].float()
+    if sorted_attn.numel() <= 2:
+        return order[:1], 1, torch.empty(0, device=attn.device)
+    gains = sorted_attn[:-1] - sorted_attn[1:]
+    k = _max_distance_knee(gains)
+    k = max(1, min(k, order.numel()))
+    return order[:k], k, gains
+
+
+def _fixed_diverse_indices(features_norm, residual_indices, diverse_k):
+    B = features_norm.shape[0]
+    while diverse_k > 0:
+        R = residual_indices.shape[1]
+        r = min(8, R - diverse_k)
+        if r <= 0:
+            break
+
+        residual_tokens = features_norm[
+            torch.arange(B, device=features_norm.device).unsqueeze(-1).expand(-1, R),
+            residual_indices
+        ]
+        a, b = residual_tokens[..., ::2, :], residual_tokens[..., 1::2, :]
+        scores = a @ b.transpose(-1, -2)
+        scores = scores.max(dim=-1).values
+        distinct_indices = scores.argsort(dim=-1, descending=True)[:, r:]
+        keep = distinct_indices.shape[1]
+        residual_indices = torch.cat([
+            residual_indices[..., ::2][
+                torch.arange(B, device=features_norm.device).unsqueeze(-1).expand(-1, keep),
+                distinct_indices
+            ],
+            residual_indices[..., 1::2]
+        ], dim=-1)
+    return residual_indices[:, :diverse_k]
+
+
+def _greedy_cosine_gain_elbow_indices(features_norm, important_idx):
+    device = features_norm.device
+    n = features_norm.shape[0]
+    important_mask = torch.zeros(n, dtype=torch.bool, device=device)
+    important_mask[important_idx] = True
+    candidates = torch.nonzero(~important_mask, as_tuple=False).flatten()
+    if candidates.numel() == 0:
+        return candidates, 0, torch.empty(0, device=device)
+
+    selected = important_idx.clone()
+    order = []
+    gains = []
+    cand = candidates
+    while cand.numel() > 0:
+        sim = features_norm[cand].float() @ features_norm[selected].float().t()
+        max_sim = sim.max(dim=1).values
+        pos = int(max_sim.argmin().item())
+        picked = cand[pos]
+        order.append(picked)
+        gains.append(1.0 - max_sim[pos])
+        selected = torch.cat([selected, picked.view(1)])
+        cand = cand[torch.arange(cand.numel(), device=device) != pos]
+
+    if not order:
+        return candidates[:0], 0, torch.empty(0, device=device)
+    order = torch.stack(order)
+    gains = torch.stack(gains)
+    k = _max_distance_knee(gains)
+    k = max(0, min(k, order.numel()))
+    return order[:k], k, gains
 
 
 class LlavaMetaModel:
@@ -154,59 +245,90 @@ class LlavaMetaForCausalLM(ABC):
         important_ratio = self.get_important_ratio() # r
         important_token_num = int(visual_token_num * important_ratio) # T_imp = M1 * r
         diverse_token_num = visual_token_num - important_token_num # T_div = M1 * (1 - r)
+        select_mode = self.get_select_mode()
+        diverse_mode = self.get_diverse_mode()
 
         # [VisPruner] Select important tokens using attention scores
         image_attentions = image_attentions.mean(dim=1) # (B, N)
-        token_indices = image_attentions.argsort(dim=-1, descending=True) # (B, N)
-        important_indices = token_indices[:, :important_token_num] # (B, T_imp)
-        residual_indices = token_indices[:, important_token_num:] # (B, N - T_imp)
-
-        # [VisPruner] Remove duplicate tokens by iterative matching and pruning
         image_normalized = image_features / image_features.norm(dim=-1, keepdim=True) # (B, N, C)
-        while diverse_token_num > 0:
-            R = residual_indices.shape[1]
-            r = min(8, R - diverse_token_num)
-            if r <= 0:
-                break
 
-            residual_tokens = image_normalized[torch.arange(B).unsqueeze(-1).expand(-1, R), residual_indices] # (B, R, C)
-            a, b = residual_tokens[..., ::2, :], residual_tokens[..., 1::2, :] # (B, R // 2, C)
-            scores = a @ b.transpose(-1, -2) # (B, R // 2, R // 2)
-            scores = scores.max(dim=-1).values # (B, R // 2)
-
-            distinct_indices = scores.argsort(dim=-1, descending=True)[:, r:] # (B, ceil(R/2) - r)
-            # [FIX] 홀수 R에서 a=residual[...,::2]는 ceil(R/2)개라 distinct_indices 길이가
-            # R//2-r(floor)와 불일치 → IndexError. arange expand를 실제 길이에 맞춤.
-            keep = distinct_indices.shape[1]
-            residual_indices = torch.cat([
-                residual_indices[..., ::2][torch.arange(B).unsqueeze(-1).expand(-1, keep), distinct_indices],
-                residual_indices[..., 1::2]
-            ], dim=-1) # (B, R - r)
-
-        if diverse_token_num > 0:
-            selected_indices = torch.cat([important_indices, residual_indices], dim=-1) # (B, M1)
+        # [Exp2] Stage 1 선택 자동화. fixed/fixed일 때는 기존 VisPruner 경로와 동일.
+        selected_per_batch = []
+        stats_per_batch = []
+        if select_mode == "fixed" and diverse_mode == "fixed":
+            token_indices = image_attentions.argsort(dim=-1, descending=True) # (B, N)
+            important_indices = token_indices[:, :important_token_num] # (B, T_imp)
+            residual_indices = token_indices[:, important_token_num:] # (B, N - T_imp)
+            diverse_indices = _fixed_diverse_indices(image_normalized, residual_indices, diverse_token_num)
+            selected_indices = torch.cat([important_indices, diverse_indices], dim=-1) if diverse_token_num > 0 else important_indices
+            selected_per_batch = [selected_indices[b] for b in range(B)]
+            for b in range(B):
+                stats_per_batch.append({
+                    "select_mode": select_mode, "diverse_mode": diverse_mode,
+                    "important": int(important_indices.shape[1]),
+                    "diverse": int(selected_indices.shape[1] - important_indices.shape[1]),
+                    "m1": int(selected_indices.shape[1]), "m2": int(M2),
+                })
+        elif select_mode == "attngain" and diverse_mode == "greedygain":
+            for b in range(B):
+                imp, n_imp, imp_gains = _attention_gain_elbow_indices(image_attentions[b])
+                div, n_div, div_gains = _greedy_cosine_gain_elbow_indices(image_normalized[b], imp)
+                selected = torch.cat([imp, div], dim=0).unique(sorted=False)
+                if selected.numel() < M2:
+                    order = image_attentions[b].argsort(descending=True)
+                    need = M2 - selected.numel()
+                    mask = torch.ones(N, dtype=torch.bool, device=device)
+                    mask[selected] = False
+                    selected = torch.cat([selected, order[mask[order]][:need]])
+                selected = selected[:N]
+                selected_per_batch.append(selected)
+                stats_per_batch.append({
+                    "select_mode": select_mode, "diverse_mode": diverse_mode,
+                    "important": int(imp.numel()), "diverse": int(div.numel()),
+                    "m1": int(selected.numel()), "m2": int(M2),
+                    "attn_gain_elbow_k": int(n_imp),
+                    "diverse_gain_elbow_k": int(n_div),
+                    "attn_gain_first": float(imp_gains[0].item()) if imp_gains.numel() else 0.0,
+                    "diverse_gain_first": float(div_gains[0].item()) if div_gains.numel() else 0.0,
+                })
         else:
-            selected_indices = important_indices # (B, M1)
+            raise ValueError(
+                f"unsupported selection pair: {select_mode}/{diverse_mode}; "
+                "use fixed/fixed or attngain/greedygain"
+            )
+
         index_masks = torch.zeros(B, N, dtype=torch.bool, device=device)
-        index_masks.scatter_(1, selected_indices, True)
+        for b, selected in enumerate(selected_per_batch):
+            index_masks[b, selected] = True
+
+        log_path = os.environ.get("EXP2_SELECTION_LOG")
+        if log_path:
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+            with open(log_path, "a") as f:
+                for row in stats_per_batch:
+                    f.write(json.dumps(row) + "\n")
 
         # [VisPruner] mm_projector 적용 (B, N, C) -> (B, N, D_llm)
         image_features = self.get_model().mm_projector(image_features)
 
         # [Two-Stage] Stage 2: Spherical K-Means 병합 (clustering on & M2 < M1)
-        if enable_clustering and M2 < M1:
+        if enable_clustering:
             from llava.model.spherical_kmeans import merge_tokens
             merge_method = self.get_merge_method()
             kmeans_max_iter = self.get_kmeans_max_iter()
             merged_list = []
             for b in range(B):
                 # Stage1 보존 토큰 (M1, D) 및 토큰별 attention score (M1,)
-                feats_b = image_features[b][selected_indices[b]]      # (M1, D)
-                attn_b = image_attentions[b][selected_indices[b]]     # (M1,)
-                merged_b = merge_tokens(
-                    feats_b, attn_b, M2,
-                    method=merge_method, max_iter=kmeans_max_iter,
-                )                                                     # (M2, D)
+                cur_idx = selected_per_batch[b]
+                feats_b = image_features[b][cur_idx]                  # (M1, D)
+                attn_b = image_attentions[b][cur_idx]                 # (M1,)
+                if M2 < feats_b.shape[0]:
+                    merged_b = merge_tokens(
+                        feats_b, attn_b, M2,
+                        method=merge_method, max_iter=kmeans_max_iter,
+                    )                                                 # (M2, D)
+                else:
+                    merged_b = feats_b
                 merged_list.append(merged_b)
             merged = torch.stack(merged_list, dim=0)                  # (B, M2, D)
             # index_masks=None → 이미 최종 토큰. prepare_inputs에서 그대로 사용
