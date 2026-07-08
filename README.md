@@ -1,5 +1,7 @@
 # AD_MLDL_termProject — Two-Stage Visual Token Reduction for VLMs
 
+> **AGG 재현:** parameter-free Attention Gain + Greedy diversity Gain 구현과 네 벤치마크 재현 절차는 [`vispruner_md/exp2/README.md`](vispruner_md/exp2/README.md)를 참조하세요. 공개 브랜치는 `agg-token-selection`입니다.
+
 VisPruner(ICCV'25)의 pruning-only 한계를 보완하는 **Two-Stage(VisPruner + Spherical K-Means)**
 시각 토큰 축소 프레임워크 구현·평가. **LLaVA-1.5-7B** 백본, 5개 벤치마크(POPE/GQA/TextVQA/
 VQAv2/SQA-IMG)에서 검증.

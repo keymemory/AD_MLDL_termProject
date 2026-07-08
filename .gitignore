@@ -257,6 +257,7 @@ term_project/exp_runner/exp2_logs/
 term_project/exp_runner/exp2_locks/
 vispruner_md/exp2/attn_stats/
 vispruner_md/exp2/attention_plots/
+reproduced_results/
 
 
 # ----- CSV 및 모든 이미지 파일 (절대 커밋 X) -----

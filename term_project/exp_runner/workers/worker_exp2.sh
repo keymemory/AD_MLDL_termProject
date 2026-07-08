@@ -4,7 +4,7 @@
 set -u
 
 GPU="${1:?GPU index required}"
-JOBS="${2:-exp_runner/jobs/exp2_phase1_jobs.tsv}"
+JOBS="${2:-exp_runner/jobs/exp2_attngain_greedygain_pope_gqa_jobs.tsv}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TP="${TP:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
@@ -36,6 +36,50 @@ LOGD=$TP/exp_runner/exp2_logs
 LOCK=$TP/exp_runner/exp2_locks
 RES=$EXP2/exp2_results.tsv
 STATD=$EXP2/attn_stats
+
+die() {
+  echo "[worker_exp2] ERROR: $*" >&2
+  exit 2
+}
+
+require_file() {
+  [ -f "$1" ] || die "required file not found: $1"
+}
+
+require_dir() {
+  [ -d "$1" ] || die "required directory not found: $1"
+}
+
+validate_benchmark() {
+  case "$1" in
+    pope)
+      require_file "$POPE_QF"
+      require_dir "$POPE_IMG"
+      require_dir "$POPE_ANN"
+      ;;
+    gqa)
+      require_file "$GQA_QF"
+      require_dir "$GQA_IMG"
+      require_file "$GQA_EVAL_DIR/eval/eval.py"
+      require_dir "$GQA_Q_PATH"
+      ;;
+    textvqa)
+      require_file "$TEXTVQA_QF"
+      require_dir "$TEXTVQA_IMG"
+      require_file "$TEXTVQA_ANN"
+      ;;
+    sqa)
+      require_file "$SQA_QF"
+      require_dir "$SQA_IMG"
+      require_file "$SQA_BASE/problems.json"
+      require_file "$SQA_BASE/pid_splits.json"
+      ;;
+    *) die "unsupported benchmark: $1";;
+  esac
+}
+
+require_file "$MODEL/config.json"
+require_file "$JOBS"
 
 mkdir -p "$ANSBASE" "$LOGD" "$LOCK" "$STATD" "$EXP2"
 [ -f "$RES" ] || echo -e "ID\tPHASE\tBENCH\tM2\tMETHOD\tSELECT\tDIVERSE\tSTAGE1\tR\tTAU\tMETRIC\tVALUE\tGEN\tM1_MEAN\tM1_STD\tM1_MIN\tM1_MAX" > "$RES"
@@ -133,6 +177,7 @@ PY
 
 while IFS=$'\t' read -r ID PHASE BENCH M2 METHOD SELECT DIVERSE STAGE1; do
   [[ "$ID" =~ ^#.*$ || -z "${ID:-}" ]] && continue
+  validate_benchmark "$BENCH"
   KEY="${ID}_${BENCH}"
   mkdir -p "$LOCK"
   mkdir "$LOCK/$KEY" 2>/dev/null || continue
