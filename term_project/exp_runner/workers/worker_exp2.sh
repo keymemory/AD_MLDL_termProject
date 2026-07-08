@@ -82,7 +82,7 @@ require_file "$MODEL/config.json"
 require_file "$JOBS"
 
 mkdir -p "$ANSBASE" "$LOGD" "$LOCK" "$STATD" "$EXP2"
-[ -f "$RES" ] || echo -e "ID\tPHASE\tBENCH\tM2\tMETHOD\tSELECT\tDIVERSE\tSTAGE1\tR\tTAU\tMETRIC\tVALUE\tGEN\tM1_MEAN\tM1_STD\tM1_MIN\tM1_MAX" > "$RES"
+[ -f "$RES" ] || echo -e "ID\tPHASE\tBENCH\tM2\tMETHOD\tSELECT\tDIVERSE\tSTAGE1\tR\tTAU\tMETRIC\tVALUE\tMETRIC2\tVALUE2\tGEN\tM1_MEAN\tM1_STD\tM1_MIN\tM1_MAX\tINFER_SEC\tLATENCY_SEC_PER_Q" > "$RES"
 
 export CUDA_VISIBLE_DEVICES=$GPU
 export CUDA_LAUNCH_BLOCKING=1
@@ -135,23 +135,26 @@ eval_one() {
   case "$bench" in
     pope)
       $PYTHON "$TP/llava/eval/eval_pope.py" --annotation-dir "$POPE_ANN" --question-file "$POPE_QF" --result-file "$ans" > "$ev" 2>&1
-      grep "Average F1 score:" "$ev" | tail -1 | awk '{print "AvgF1\t"$NF}'
+      local avg_f1 avg_acc
+      avg_f1=$(grep "Average F1 score:" "$ev" | tail -1 | awk '{print $NF}')
+      avg_acc=$(awk '/^Accuracy:/ {sum += $2; n += 1} END {if (n) printf "%.10f", sum/n}' "$ev")
+      echo -e "AvgF1\t${avg_f1}\tAvgAcc\t${avg_acc}"
       ;;
     gqa)
       local pred="$ANSBASE/gqa/${id}_pred.json"
       $PYTHON "$TP/scripts/convert_gqa_for_eval.py" --src "$ans" --dst "$pred" >> "$W" 2>&1
       (cd "$GQA_EVAL_DIR" && $PYTHON eval/eval.py --path "$GQA_Q_PATH" --tier testdev_balanced --predictions "$pred") > "$ev" 2>&1
-      grep -iE "^accuracy:" "$ev" | tail -1 | awk '{gsub("%","",$2); print "Acc\t"$2}'
+      grep -iE "^accuracy:" "$ev" | tail -1 | awk '{gsub("%","",$2); print "Acc\t"$2"\t-\t-"}'
       ;;
     textvqa)
       $PYTHON "$TP/llava/eval/eval_textvqa.py" --annotation-file "$TEXTVQA_ANN" --result-file "$ans" > "$ev" 2>&1
-      grep -iE "^Accuracy:" "$ev" | tail -1 | awk '{gsub("%","",$2); print "Acc\t"$2}'
+      grep -iE "^Accuracy:" "$ev" | tail -1 | awk '{gsub("%","",$2); print "Acc\t"$2"\t-\t-"}'
       ;;
     sqa)
       local out_detail="$LOGD/${id}_sqa_output.jsonl"
       local out_result="$LOGD/${id}_sqa_result.json"
       $PYTHON "$TP/llava/eval/eval_science_qa.py" --base-dir "$SQA_BASE" --result-file "$ans" --output-file "$out_detail" --output-result "$out_result" > "$ev" 2>&1
-      grep -iE "^Total:" "$ev" | tail -1 | grep -oP "(?<!IMG-)Accuracy: \\K[0-9.]+" | awk '{print "Acc\t"$1}'
+      grep -iE "^Total:" "$ev" | tail -1 | grep -oP "(?<!IMG-)Accuracy: \\K[0-9.]+" | awk '{print "Acc\t"$1"\t-\t-"}'
       ;;
   esac
 }
@@ -190,6 +193,8 @@ while IFS=$'\t' read -r ID PHASE BENCH M2 METHOD SELECT DIVERSE STAGE1; do
   touch "$STAT"
 
   echo "[g$GPU] START $KEY M2=$M2 method=$METHOD select=$SELECT diverse=$DIVERSE stage1=$STAGE1" | tee -a "$W"
+  INITIAL_GEN=0; [ -f "$ANS" ] && INITIAL_GEN=$(wc -l < "$ANS")
+  INFER_START_NS=$(date +%s%N)
   for attempt in $(seq 1 25); do
     C=0; [ -f "$ANS" ] && C=$(wc -l < "$ANS")
     [ "$C" -ge "$TOT" ] && break
@@ -198,18 +203,27 @@ while IFS=$'\t' read -r ID PHASE BENCH M2 METHOD SELECT DIVERSE STAGE1; do
     EXP2_SELECTION_LOG="$STAT" run_infer "$BENCH" "$ANS" "$M2" "$METHOD" "$SELECT" "$DIVERSE" "$STAGE1" >> "$W" 2>&1 \
       || echo "[g$GPU] $KEY inference failed #$attempt" >> "$W"
   done
+  INFER_END_NS=$(date +%s%N)
 
   GEN=$(wc -l < "$ANS" 2>/dev/null || echo 0)
+  INFER_SEC=$(awk -v start="$INFER_START_NS" -v end="$INFER_END_NS" 'BEGIN {printf "%.6f", (end-start)/1000000000}')
+  if [ "$INITIAL_GEN" -eq 0 ] && [ "$GEN" -gt 0 ]; then
+    LATENCY_SEC_PER_Q=$(awk -v sec="$INFER_SEC" -v n="$GEN" 'BEGIN {printf "%.6f", sec/n}')
+  else
+    LATENCY_SEC_PER_Q="RESUMED"
+  fi
   METVAL=$(eval_one "$BENCH" "$ID" "$ANS" "$EV")
   METRIC=$(echo "$METVAL" | cut -f1)
   VALUE=$(echo "$METVAL" | cut -f2)
+  METRIC2=$(echo "$METVAL" | cut -f3)
+  VALUE2=$(echo "$METVAL" | cut -f4)
   STATS=$(stats_one "$STAT")
 
   (
     flock 9
-    echo -e "${ID}\t${PHASE}\t${BENCH}\t${M2}\t${METHOD}\t${SELECT}\t${DIVERSE}\t${STAGE1}\t-\t-\t${METRIC}\t${VALUE}\t${GEN}/${TOT}\t${STATS}" >> "$RES"
+    echo -e "${ID}\t${PHASE}\t${BENCH}\t${M2}\t${METHOD}\t${SELECT}\t${DIVERSE}\t${STAGE1}\t-\t-\t${METRIC}\t${VALUE}\t${METRIC2}\t${VALUE2}\t${GEN}/${TOT}\t${STATS}\t${INFER_SEC}\t${LATENCY_SEC_PER_Q}" >> "$RES"
   ) 9>>"$RES.lock"
-  echo "[g$GPU] DONE $KEY $METRIC=$VALUE ($GEN/$TOT)" | tee -a "$W"
+  echo "[g$GPU] DONE $KEY $METRIC=$VALUE ($GEN/$TOT) infer=${INFER_SEC}s latency=${LATENCY_SEC_PER_Q}s/q" | tee -a "$W"
 done < "$JOBS"
 
 echo "[g$GPU] worker_exp2 DONE" | tee -a "$W"

@@ -76,3 +76,15 @@ AGG(Attention Gain + Greedy diversity Gain)는 Stage-1에서 보존할 important
 | SQA-IMG | 128 | 69.75 | 70.08 | -0.33 |
 
 전체 행 단위 결과는 `exp2_results.tsv`에 수록한다.
+
+## POPE Weighted Latency
+
+AGG weighted merge 조건만 대상으로 `M2=128 -> 64 -> 32`를 nohup worker 하나에서 순차 실행했다. Latency는 각 조건의 inference process 시작 직전부터 answer JSONL 생성 완료 직후까지의 wall-clock time을 생성 문항 수로 나눈 값이다. 따라서 모델 로딩, image I/O, preprocessing, AGG selection, spherical k-means, weighted merge, generation, answer write를 포함하고 POPE evaluator 시간은 제외한다.
+
+| M2 | AvgF1 | AvgAcc | Generated | M1 mean | M1 std | M1 min | M1 max | INFER_SEC | Latency sec/q |
+|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|
+| 32 | 0.8099 | 0.8288 | 8910/8910 | 105.17 | 19.21 | 55 | 158 | 2726.45 | 0.3060 |
+| 64 | 0.8470 | 0.8572 | 8910/8910 | 105.20 | 19.12 | 64 | 158 | 2711.07 | 0.3043 |
+| 128 | 0.8585 | 0.8662 | 8910/8910 | 129.22 | 4.25 | 128 | 158 | 2817.60 | 0.3162 |
+
+성능은 `M2=128`이 가장 높고, latency는 `M2=64`가 가장 낮았다. `M2=32`와 `M2=64`는 AGG가 선택한 평균 `M1`이 거의 같아서 latency 차이가 작지만, `M2=32`는 성능 하락폭이 더 크다. 정리 TSV는 `pope_agg_weighted_latency_results.tsv`에 수록한다.

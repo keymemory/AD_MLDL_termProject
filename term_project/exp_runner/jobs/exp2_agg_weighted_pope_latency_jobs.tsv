@@ -1,0 +1,5 @@
+# ID	PHASE	BENCH	M2	METHOD	SELECT	DIVERSE	STAGE1
+# Sequential latency run: M2=128 -> 64 -> 32, weighted merge only.
+AGG-LAT-128w	latency-pope-weighted	pope	128	weighted_avg	attngain	greedygain	576
+AGG-LAT-64w	latency-pope-weighted	pope	64	weighted_avg	attngain	greedygain	576
+AGG-LAT-32w	latency-pope-weighted	pope	32	weighted_avg	attngain	greedygain	576
