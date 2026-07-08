@@ -43,7 +43,9 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
 
     def __init__(self, config, visual_token_num, important_ratio,
                  enable_clustering=False, stage1_tokens=None,
-                 merge_method="simple_avg", kmeans_max_iter=10):
+                 merge_method="simple_avg", kmeans_max_iter=10,
+                 selection_method="topk", energy_tau=0.5,
+                 stat_k=2.0, stat_robust=False, taskaware_kd=1.5):
         super(LlamaForCausalLM, self).__init__(config)
         self.model = LlavaLlamaModel(config)
         self.pretraining_tp = config.pretraining_tp
@@ -60,6 +62,16 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
         self.stage1_tokens = stage1_tokens if stage1_tokens is not None else visual_token_num
         self.merge_method = merge_method
         self.kmeans_max_iter = kmeans_max_iter
+
+        # [Phase 1] Adaptive Stage-1 selection config (default topk = 기존 동작)
+        self.selection_method = selection_method
+        self.energy_tau = energy_tau
+        self.stat_k = stat_k
+        self.stat_robust = stat_robust
+        # [Phase 3] Task-aware(merge-distortion) 병합 임계 k_d
+        self.taskaware_kd = taskaware_kd
+        # [Phase 1] 진단 로그 버퍼: encode_images가 (n_imp, M1)을 누적 → 추론 후 평균 집계
+        self._adaptive_log = []
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -87,6 +99,23 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
 
     def get_kmeans_max_iter(self):
         return getattr(self, "kmeans_max_iter", 10)
+
+    # [Phase 1] Adaptive Stage-1 selection getters (getattr+default = 구버전 안전)
+    def get_selection_method(self):
+        return getattr(self, "selection_method", "topk")
+
+    def get_energy_tau(self):
+        return getattr(self, "energy_tau", 0.5)
+
+    def get_stat_k(self):
+        return getattr(self, "stat_k", 2.0)
+
+    def get_stat_robust(self):
+        return getattr(self, "stat_robust", False)
+
+    # [Phase 3] Task-aware 병합 임계
+    def get_taskaware_kd(self):
+        return getattr(self, "taskaware_kd", 1.5)
 
     def forward(
         self,

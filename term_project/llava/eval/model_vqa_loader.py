@@ -90,6 +90,11 @@ def eval_model(args):
         stage1_tokens=args.stage1_tokens,
         merge_method=args.merge_method,
         kmeans_max_iter=args.kmeans_max_iter,
+        taskaware_kd=args.taskaware_kd,
+        selection_method=args.selection_method,
+        energy_tau=args.energy_tau,
+        stat_k=args.stat_k,
+        stat_robust=args.stat_robust,
     )
 
     # Data
@@ -151,6 +156,30 @@ def eval_model(args):
         ans_file.flush()
     ans_file.close()
 
+    # [Phase 1] adaptive selection 집계 → .meta (worker.sh가 읽어 results.tsv에 기록)
+    _log = getattr(model, "_adaptive_log", [])
+    if _log:
+        _avg_n_imp = sum(x["n_imp"] for x in _log) / len(_log)
+        _avg_M1 = sum(x["M1"] for x in _log) / len(_log)
+        _avg_r = sum(x["n_imp"] / max(1, x["M1"]) for x in _log) / len(_log)
+        _floor_pct = 100.0 * sum(1 for x in _log if x.get("floor")) / len(_log)
+        _cap_pct = 100.0 * sum(1 for x in _log if x.get("cap")) / len(_log)
+        with open(answers_file + ".meta", "w") as _mf:
+            _mf.write(json.dumps({
+                "selection_method": args.selection_method,
+                "count": len(_log),
+                "avg_n_imp": round(_avg_n_imp, 3),
+                "avg_M1": round(_avg_M1, 3),
+                "avg_r": round(_avg_r, 4),
+                "floor_pct": round(_floor_pct, 1),
+                "cap_pct": round(_cap_pct, 1),
+            }) + "\n")
+        # [Phase 1] 이미지별 분포 전체 덤프 (분포 분석 스크립트용)
+        with open(answers_file + ".dist.jsonl", "w") as _df:
+            for _rec in _log:
+                _df.write(json.dumps(_rec) + "\n")
+        print(f"[Phase1] adaptive meta: avg_M1={_avg_M1:.2f} avg_r={_avg_r:.4f} n={len(_log)}")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-path", type=str, default="facebook/opt-350m")
@@ -171,8 +200,15 @@ if __name__ == "__main__":
     parser.add_argument("--enable_clustering", action="store_true", default=False)
     parser.add_argument("--stage1_tokens", type=int, default=None)
     parser.add_argument("--merge_method", type=str, default="simple_avg",
-                        choices=["simple_avg", "weighted_avg"])
+                        choices=["simple_avg", "weighted_avg", "taskaware"])
+    parser.add_argument("--taskaware_kd", type=float, default=1.5)
     parser.add_argument("--kmeans_max_iter", type=int, default=10)
+    # [Phase 1] Adaptive Stage-1 selection (default topk = 기존 VisPruner 동작)
+    parser.add_argument("--selection_method", type=str, default="topk",
+                        choices=["topk", "energy", "statistical"])
+    parser.add_argument("--energy_tau", type=float, default=0.5)
+    parser.add_argument("--stat_k", type=float, default=2.0)
+    parser.add_argument("--stat_robust", action="store_true", default=False)
     args = parser.parse_args()
 
     eval_model(args)

@@ -145,18 +145,44 @@ class LlavaMetaForCausalLM(ABC):
         device = image_features.device
         index_masks = torch.ones(B, N, dtype=torch.bool, device=device)
 
-        # [Two-Stage] Stage1 보존 토큰 수 M1, 최종 토큰 수 M2
+        # [Two-Stage] 최종 토큰 수 M2, clustering 여부
         M2 = self.get_visual_token_num()
         enable_clustering = self.get_enable_clustering()
-        M1 = self.get_stage1_tokens() if enable_clustering else M2
-        # Stage1 선택은 M1개 기준으로 수행 (clustering off면 M1==M2 → 기존 VisPruner와 동일)
-        visual_token_num = M1
-        important_ratio = self.get_important_ratio() # r
-        important_token_num = int(visual_token_num * important_ratio) # T_imp = M1 * r
-        diverse_token_num = visual_token_num - important_token_num # T_div = M1 * (1 - r)
+
+        # [VisPruner] [CLS] attention saliency 점수 (head 평균) — 모든 경로 공통
+        image_attentions = image_attentions.mean(dim=1) # (B, N)
+
+        # [Phase 1] Stage1 important 개수(n_imp)·M1 결정
+        selection_method = self.get_selection_method()
+        _detail = None
+        if selection_method == "topk":
+            # ===== 기존 VisPruner 경로 (회귀 안전: 고정 M1·r) =====
+            M1 = self.get_stage1_tokens() if enable_clustering else M2
+            important_ratio = self.get_important_ratio() # r
+            important_token_num = int(M1 * important_ratio) # T_imp = M1 * r
+            diverse_token_num = M1 - important_token_num # T_div = M1 * (1 - r)
+        else:
+            # ===== (가)energy / (나)statistical: 이미지별 가변 n_imp·M1 =====
+            # 평가 추론은 batch_size=1(model_vqa_loader assert)이라 b=0만 유효.
+            from llava.model.adaptive_selection import compute_adaptive_counts
+            n_imp_list, M1_list, detail_list = compute_adaptive_counts(
+                image_attentions, selection_method, M2,
+                energy_tau=self.get_energy_tau(), stat_k=self.get_stat_k(),
+                stat_robust=self.get_stat_robust())
+            important_token_num = n_imp_list[0]
+            M1 = M1_list[0]
+            diverse_token_num = M1 - important_token_num
+            _detail = detail_list[0]
+
+        # [Phase 1] 진단 로그: 이미지별 dict 누적 (출력 무영향 — 회귀 비트동일 유지)
+        if hasattr(self, "_adaptive_log"):
+            _rec = {"method": selection_method,
+                    "n_imp": int(important_token_num), "M1": int(M1)}
+            if _detail is not None:
+                _rec.update(_detail)  # raw_M1, floor, cap
+            self._adaptive_log.append(_rec)
 
         # [VisPruner] Select important tokens using attention scores
-        image_attentions = image_attentions.mean(dim=1) # (B, N)
         token_indices = image_attentions.argsort(dim=-1, descending=True) # (B, N)
         important_indices = token_indices[:, :important_token_num] # (B, T_imp)
         residual_indices = token_indices[:, important_token_num:] # (B, N - T_imp)
@@ -195,20 +221,32 @@ class LlavaMetaForCausalLM(ABC):
 
         # [Two-Stage] Stage 2: Spherical K-Means 병합 (clustering on & M2 < M1)
         if enable_clustering and M2 < M1:
-            from llava.model.spherical_kmeans import merge_tokens
+            from llava.model.spherical_kmeans import merge_tokens, merge_tokens_taskaware
             merge_method = self.get_merge_method()
             kmeans_max_iter = self.get_kmeans_max_iter()
             merged_list = []
+            _pres_list = []
             for b in range(B):
                 # Stage1 보존 토큰 (M1, D) 및 토큰별 attention score (M1,)
                 feats_b = image_features[b][selected_indices[b]]      # (M1, D)
                 attn_b = image_attentions[b][selected_indices[b]]     # (M1,)
-                merged_b = merge_tokens(
-                    feats_b, attn_b, M2,
-                    method=merge_method, max_iter=kmeans_max_iter,
-                )                                                     # (M2, D)
+                if merge_method == "taskaware":
+                    # [Phase3] merge-distortion 이상치 보존 + 나머지 weighted 병합 (M2 불변)
+                    merged_b, _p = merge_tokens_taskaware(
+                        feats_b, attn_b, M2,
+                        kd=self.get_taskaware_kd(), max_iter=kmeans_max_iter,
+                    )                                                 # (M2, D)
+                    _pres_list.append(_p)
+                else:
+                    merged_b = merge_tokens(
+                        feats_b, attn_b, M2,
+                        method=merge_method, max_iter=kmeans_max_iter,
+                    )                                                 # (M2, D)
                 merged_list.append(merged_b)
             merged = torch.stack(merged_list, dim=0)                  # (B, M2, D)
+            # [Phase3] taskaware preserve_count를 진단 로그에 기록 (출력 무영향)
+            if _pres_list and hasattr(self, "_adaptive_log") and self._adaptive_log:
+                self._adaptive_log[-1]["preserve"] = int(round(sum(_pres_list) / len(_pres_list)))
             # index_masks=None → 이미 최종 토큰. prepare_inputs에서 그대로 사용
             return merged, None
 

@@ -128,3 +128,61 @@ def merge_tokens(tokens, attn_scores, k, method="simple_avg", max_iter=10,
         out = out / cnt.clamp_min(1.0).unsqueeze(1)
 
     return out.to(tokens.dtype)
+
+
+@torch.no_grad()
+def merge_tokens_taskaware(tokens, attn_scores, k, kd=1.5, max_p_ratio=0.5,
+                           max_iter=10, init_indices=None):
+    """[Phase3] Task-aware (merge-distortion) 병합.
+
+    K-Means 병합 후, 각 토큰이 자기 클러스터 centroid와 방향이 얼마나 다른지(distortion=1-cos)를 재고,
+    distortion이 통계적 이상치(μ_d + kd·σ_d)인 토큰 = 병합 시 정보 손실이 큰 토큰(예: 글자)은
+    병합에서 제외하고 원본을 보존한다. 나머지는 weighted_avg로 병합.
+
+    최종 토큰 수는 M2(=k) 불변: preserve p개(원본) + (k−p)개(병합) = k.
+    p ≤ k·max_p_ratio 상한(넘으면 상위 distortion만 보존). 반환: (merged (k,D), preserve_count).
+    """
+    M1, D = tokens.shape
+    if k >= M1:
+        return tokens, 0
+
+    # 1. K-Means 클러스터 + centroid → 토큰별 distortion
+    assign = spherical_kmeans(tokens, k, max_iter=max_iter, init_indices=init_indices)
+    xn = _l2norm(tokens.float())                                  # (M1,D)
+    cent = torch.zeros(k, D, device=tokens.device, dtype=torch.float32)
+    cnt = torch.zeros(k, device=tokens.device, dtype=torch.float32)
+    cent.index_add_(0, assign, xn)
+    cnt.index_add_(0, assign, torch.ones(M1, device=tokens.device))
+    cent = _l2norm(cent / cnt.clamp_min(1.0).unsqueeze(1))
+    cos_i = (xn * cent[assign]).sum(-1)                           # (M1,) cos(x_i, centroid)
+    dist = 1.0 - cos_i                                            # distortion
+
+    # 2. preserve = distortion 이상치, 상한 p ≤ k·max_p_ratio
+    thr = dist.mean() + kd * dist.std()
+    preserve = dist >= thr
+    max_p = int(k * max_p_ratio)
+    p = int(preserve.sum().item())
+    if p > max_p:
+        if max_p > 0:
+            kth = dist.topk(max_p).values[-1]
+            preserve = dist >= kth
+        else:
+            preserve = torch.zeros_like(preserve)
+        p = int(preserve.sum().item())
+
+    k_rest = k - p
+    # 경계 처리
+    if k_rest <= 0:                                               # p==k: 상위 distortion k개 원본
+        top = dist.topk(k).indices
+        return tokens[top], k
+    if p == 0:                                                    # 보존 없음: 기존 weighted 병합
+        return merge_tokens(tokens, attn_scores, k, method="weighted_avg",
+                            max_iter=max_iter, init_indices=init_indices), 0
+
+    # 3. preserve 원본 p개 + 나머지 (k−p) weighted 병합
+    pres_idx = preserve.nonzero(as_tuple=False).flatten()
+    rest_idx = (~preserve).nonzero(as_tuple=False).flatten()
+    merged_rest = merge_tokens(tokens[rest_idx], attn_scores[rest_idx], k_rest,
+                               method="weighted_avg", max_iter=max_iter)      # (k−p, D)
+    out = torch.cat([tokens[pres_idx], merged_rest], dim=0)                   # (k, D)
+    return out, p

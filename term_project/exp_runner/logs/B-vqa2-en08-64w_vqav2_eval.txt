@@ -1,0 +1,4 @@
+VQAv2(subset) N=6000  Overall Acc = 71.02
+  yes/no : 89.88  (n=2000)
+  number : 54.38  (n=2000)
+  other  : 68.78  (n=2000)

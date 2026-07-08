@@ -40,6 +40,11 @@ def eval_model(args):
         stage1_tokens=args.stage1_tokens,
         merge_method=args.merge_method,
         kmeans_max_iter=args.kmeans_max_iter,
+        taskaware_kd=args.taskaware_kd,
+        selection_method=args.selection_method,
+        energy_tau=args.energy_tau,
+        stat_k=args.stat_k,
+        stat_robust=args.stat_robust,
     )
 
     # Data
@@ -138,8 +143,15 @@ if __name__ == "__main__":
     parser.add_argument("--enable_clustering", action="store_true", default=False)
     parser.add_argument("--stage1_tokens", type=int, default=None)
     parser.add_argument("--merge_method", type=str, default="simple_avg",
-                        choices=["simple_avg", "weighted_avg"])
+                        choices=["simple_avg", "weighted_avg", "taskaware"])
+    parser.add_argument("--taskaware_kd", type=float, default=1.5)
     parser.add_argument("--kmeans_max_iter", type=int, default=10)
+    # [Phase 1] Adaptive Stage-1 selection (default topk = 기존 VisPruner 동작)
+    parser.add_argument("--selection_method", type=str, default="topk",
+                        choices=["topk", "energy", "statistical"])
+    parser.add_argument("--energy_tau", type=float, default=0.5)
+    parser.add_argument("--stat_k", type=float, default=2.0)
+    parser.add_argument("--stat_robust", action="store_true", default=False)
     args = parser.parse_args()
 
     eval_model(args)

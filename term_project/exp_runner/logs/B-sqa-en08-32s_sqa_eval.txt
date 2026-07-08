@@ -1,0 +1,1 @@
+Total: 4241, Correct: 2953, Accuracy: 69.63%, IMG-Accuracy: 68.42%

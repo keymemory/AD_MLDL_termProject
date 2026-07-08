@@ -1,7 +1,7 @@
 #!/bin/bash
 # Two-Stage Framework sanity check 3종 (POPE 300 subset, 최종 64토큰, r=0.5)
 set -u
-cd /home/jhlee/CLUST_KETI/SKKU_Works/Y1_S1/Advanced_ML_DL/experiments/term_project
+cd /home/jhlee/CLUST_KETI/AD_MLDL_termProject/term_project
 source /home/jhlee/miniconda3/etc/profile.d/conda.sh
 conda activate vispruner
 export CUDA_VISIBLE_DEVICES=2 CUDA_LAUNCH_BLOCKING=1
